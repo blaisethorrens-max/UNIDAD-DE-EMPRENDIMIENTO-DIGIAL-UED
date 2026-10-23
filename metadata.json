@@ -1,0 +1,6 @@
+{
+  "name": "UED - Unidad de Emprendimiento Digital",
+  "description": "Prototipo interactivo para la formulación de planes de negocios digitales con IA Gemini 3.8 Flash y Google Workspace.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
