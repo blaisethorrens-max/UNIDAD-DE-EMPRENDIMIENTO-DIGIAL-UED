@@ -3,11 +3,14 @@ import { createContext, useContext, useState, useEffect } from 'react';
 export type LearnerData = {
   id: string;
   name: string;
+  documento: string; // Documento de Identidad (Cédula o T.I.)
   ficha: string;
   program: string;
   center: string;
   whatsapp: string;
   email: string; // Correo de Gmail del aprendiz
+  accessPin: string; // Clave personal o PIN asignado por el asesor
+  registeredAt?: string; // Fecha de registro por el asesor
   progress: number; // 0-100
   moduleAnswers: Record<number, Record<string, string>>;
   moduleStatus: Record<number, 'pending' | 'in-review' | 'approved'>;
@@ -25,11 +28,14 @@ const INITIAL_SEED_LEARNERS: LearnerData[] = [
   {
     id: 'learner-1',
     name: 'Carlos Eduardo Morales',
+    documento: '1020304050',
     ficha: '2845612',
     program: 'Tecnología en Análisis y Desarrollo de Software',
     center: 'Centro de Servicios y Gestión Empresarial',
     whatsapp: '573147873570',
     email: 'carlos.morales.sena@gmail.com',
+    accessPin: '1020304050',
+    registeredAt: '2026-02-15',
     progress: 83,
     score: 4.6,
     moduleStatus: { 1: 'approved', 2: 'approved', 3: 'approved', 4: 'approved', 5: 'in-review', 6: 'pending' },
@@ -52,11 +58,14 @@ const INITIAL_SEED_LEARNERS: LearnerData[] = [
   {
     id: 'learner-2',
     name: 'Valentina Restrepo Gómez',
+    documento: '1030405060',
     ficha: '2845612',
     program: 'Tecnología en Análisis y Desarrollo de Software',
     center: 'Centro de Servicios y Gestión Empresarial',
     whatsapp: '573105558899',
     email: 'valentina.restrepo.sena@gmail.com',
+    accessPin: '1030405060',
+    registeredAt: '2026-02-18',
     progress: 50,
     score: 4.2,
     moduleStatus: { 1: 'approved', 2: 'approved', 3: 'in-review', 4: 'pending', 5: 'pending', 6: 'pending' },
@@ -72,11 +81,14 @@ const INITIAL_SEED_LEARNERS: LearnerData[] = [
   {
     id: 'learner-3',
     name: 'Andrés Felipe Castro',
+    documento: '1040506070',
     ficha: '2712345',
     program: 'Gestión Empresarial y Finanzas',
     center: 'Centro de Comercio y Servicios',
     whatsapp: '573187774411',
     email: 'andres.castro.sena@gmail.com',
+    accessPin: '1040506070',
+    registeredAt: '2026-02-20',
     progress: 67,
     score: 4.0,
     moduleStatus: { 1: 'approved', 2: 'approved', 3: 'approved', 4: 'in-review', 5: 'pending', 6: 'pending' },
@@ -92,11 +104,14 @@ const INITIAL_SEED_LEARNERS: LearnerData[] = [
   {
     id: 'learner-4',
     name: 'Mariana Sofia Torres',
+    documento: '1050607080',
     ficha: '2698741',
     program: 'Mercadeo y Negocios Digitales',
     center: 'Centro Nacional Colombo Alemán',
     whatsapp: '573012223344',
     email: 'mariana.torres.sena@gmail.com',
+    accessPin: '1050607080',
+    registeredAt: '2026-02-25',
     progress: 33,
     score: 3.8,
     moduleStatus: { 1: 'approved', 2: 'in-review', 3: 'pending', 4: 'pending', 5: 'pending', 6: 'pending' },
@@ -119,7 +134,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       const saved = localStorage.getItem('learners');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Normalize existing data with documento and accessPin if missing
+          return parsed.map((l: any, idx: number) => ({
+            ...l,
+            documento: l.documento || (l.id === 'learner-1' ? '1020304050' : l.id === 'learner-2' ? '1030405060' : l.id === 'learner-3' ? '1040506070' : l.id === 'learner-4' ? '1050607080' : `100000000${idx + 1}`),
+            accessPin: l.accessPin || l.documento || '1020304050',
+            registeredAt: l.registeredAt || '2026-02-15',
+          }));
+        }
       }
     } catch (e) {
       console.error('Error loading learners from localStorage:', e);
@@ -138,6 +161,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       moduleAnswers: {},
       moduleStatus: { 1: 'pending', 2: 'pending', 3: 'pending', 4: 'pending', 5: 'pending', 6: 'pending' },
       score: 4.0,
+      registeredAt: learnerData.registeredAt || new Date().toISOString().split('T')[0],
     };
     setLearners((prev) => {
       const exists = prev.find(l => l.id === newLearner.id);

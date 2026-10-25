@@ -2,6 +2,12 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { googleSignIn } from '../auth';
+import {
+  verifyAdvisorKey,
+  validateKeyRules,
+  getAdvisorSecretKey,
+} from '../services/securityService';
+import SecurityKeyModal from './SecurityKeyModal';
 
 export default function Login() {
   const { login } = useAuth();
@@ -16,11 +22,17 @@ export default function Login() {
     whatsapp: '573147873570',
   });
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isConfigKeyModalOpen, setIsConfigKeyModalOpen] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const keyRules = validateKeyRules(password);
 
   // Sign In with Google Workspace (OAuth Drive & Sheets)
   const handleGoogleSignIn = async () => {
     setLoading(true);
+    setLoginError(null);
     try {
       const { user } = await googleSignIn();
       if (role === 'learner') {
@@ -37,10 +49,10 @@ export default function Login() {
         });
         login({ id: user.uid, name: learnerName, email: learnerEmail, role: 'learner' });
       } else {
-        if (password === 'Sena 1234' || !password) {
+        if (verifyAdvisorKey(password)) {
           login({ id: user.uid, name: user.displayName || 'Asesor SENA', role: 'instructor' });
         } else {
-          alert('Clave de asesor incorrecta. Debe ser: Sena 1234');
+          setLoginError('Clave de Asesor incorrecta. Ingresa la clave secreta de 9 caracteres (letras, símbolos y números).');
         }
       }
     } catch (error: any) {
@@ -61,10 +73,10 @@ export default function Login() {
         });
         login({ id: fallbackId, name, email, role: 'learner' });
       } else {
-        if (password === 'Sena 1234' || !password) {
+        if (verifyAdvisorKey(password)) {
           login({ id: fallbackId, name: 'Asesor SENA UED', role: 'instructor' });
         } else {
-          alert('Clave de asesor incorrecta. Debe ser: Sena 1234');
+          setLoginError('Clave de Asesor incorrecta. Ingresa la clave secreta de 9 caracteres (letras, símbolos y números).');
         }
       }
     } finally {
@@ -75,6 +87,8 @@ export default function Login() {
   // Direct Standard Form Submission
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setLoginError(null);
+
     if (role === 'learner') {
       const learnerId = `learner-${Date.now()}`;
       const email = formData.email || 'aprendiz.sena@gmail.com';
@@ -89,10 +103,12 @@ export default function Login() {
       });
       login({ id: learnerId, name: formData.name || 'Aprendiz UED', email, role: 'learner' });
     } else {
-      if (password === 'Sena 1234') {
+      if (verifyAdvisorKey(password)) {
         login({ id: 'advisor-admin', name: 'Asesor SENA UED', role: 'instructor' });
       } else {
-        alert('Clave incorrecta. Recuerda que la clave de Asesor es: Sena 1234');
+        setLoginError(
+          'Clave de Asesor incorrecta. Debe ser la clave secreta de 9 caracteres entre letras, símbolos y números que conoces o configuraste.'
+        );
       }
     }
   };
@@ -117,7 +133,10 @@ export default function Login() {
         <div className="flex p-1 bg-emerald-100 dark:bg-emerald-900 rounded-xl">
           <button
             type="button"
-            onClick={() => setRole('learner')}
+            onClick={() => {
+              setRole('learner');
+              setLoginError(null);
+            }}
             className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
               role === 'learner'
                 ? 'bg-emerald-700 text-white shadow-sm'
@@ -128,16 +147,35 @@ export default function Login() {
           </button>
           <button
             type="button"
-            onClick={() => setRole('instructor')}
+            onClick={() => {
+              setRole('instructor');
+              setLoginError(null);
+            }}
             className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
               role === 'instructor'
                 ? 'bg-orange-500 text-white shadow-sm'
                 : 'text-emerald-900 dark:text-emerald-300 hover:text-emerald-950'
             }`}
           >
-            🧑‍🏫 Asesor / Instructor
+            🧑‍🏫 Asesor / Instructor 🔐
           </button>
         </div>
+
+        {loginError && (
+          <div className="p-3 rounded-xl bg-red-100 dark:bg-red-950/80 text-red-800 dark:text-red-200 text-xs font-semibold border border-red-300 dark:border-red-800 flex items-start gap-2">
+            <span className="text-sm shrink-0">⚠️</span>
+            <div className="space-y-1">
+              <span>{loginError}</span>
+              <button
+                type="button"
+                onClick={() => setIsConfigKeyModalOpen(true)}
+                className="block text-orange-600 dark:text-orange-400 underline font-bold text-[11px]"
+              >
+                ¿Deseas colocar o actualizar tu clave secreta de 9 caracteres?
+              </button>
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleFormSubmit} className="space-y-4">
           {role === 'learner' ? (
@@ -231,22 +269,77 @@ export default function Login() {
               </div>
             </div>
           ) : (
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="block font-semibold text-emerald-900 dark:text-emerald-200 mb-1">
-                  Clave de Acceso Asesor *
-                </label>
-                <input
-                  type="password"
-                  placeholder="Ingresa la clave: Sena 1234"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  required
-                  className="w-full p-3 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-emerald-900 text-slate-900 dark:text-white"
-                />
-                <p className="text-[11px] text-slate-500 dark:text-emerald-400 mt-1">
-                  Pista de seguridad: <code className="bg-emerald-100 dark:bg-emerald-800 px-1 py-0.5 rounded text-emerald-900 dark:text-emerald-200 font-bold">Sena 1234</code>
+            <div className="space-y-3.5 text-xs">
+              <div className="p-3 rounded-2xl bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800 text-[11px] text-orange-900 dark:text-orange-200 space-y-1">
+                <div className="font-bold flex items-center gap-1.5 text-xs">
+                  <span>🔐 Control de Acceso del Asesor / Administrador</span>
+                </div>
+                <p className="leading-relaxed">
+                  Por seguridad y privacidad de la app publicada, ingresa la clave secreta de <strong>9 caracteres</strong> (con letras, símbolos y números).
                 </p>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="font-bold text-emerald-900 dark:text-emerald-200">
+                    Clave Secreta de Asesor (9 Caracteres) *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-[11px] text-orange-600 dark:text-orange-400 hover:underline font-semibold"
+                  >
+                    {showPassword ? 'Ocultar' : 'Mostrar'}
+                  </button>
+                </div>
+
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    maxLength={9}
+                    placeholder="Ej: Sena*2026"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    required
+                    className="w-full p-3 pr-14 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-emerald-900 text-slate-900 dark:text-white font-mono text-sm tracking-wider focus:ring-2 focus:ring-orange-500 outline-none"
+                  />
+                  <span className={`absolute right-3 top-3 font-mono text-xs font-bold ${
+                    keyRules.lengthValid ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'
+                  }`}>
+                    {keyRules.charCount}/9
+                  </span>
+                </div>
+              </div>
+
+              {/* Real-time Checklist Chips */}
+              <div className="grid grid-cols-2 gap-1.5 p-2 rounded-xl bg-slate-50 dark:bg-emerald-900/40 text-[10px]">
+                <span className={`flex items-center gap-1 ${keyRules.lengthValid ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-500'}`}>
+                  {keyRules.lengthValid ? '✓' : '○'} 9 Caracteres
+                </span>
+                <span className={`flex items-center gap-1 ${keyRules.hasLetters ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-500'}`}>
+                  {keyRules.hasLetters ? '✓' : '○'} Letras
+                </span>
+                <span className={`flex items-center gap-1 ${keyRules.hasNumbers ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-500'}`}>
+                  {keyRules.hasNumbers ? '✓' : '○'} Números
+                </span>
+                <span className={`flex items-center gap-1 ${keyRules.hasSymbols ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-500'}`}>
+                  {keyRules.hasSymbols ? '✓' : '○'} Símbolos (*, #, $, @)
+                </span>
+              </div>
+
+              {/* Button to place / configure custom secret key */}
+              <div className="pt-1 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setIsConfigKeyModalOpen(true)}
+                  className="text-[11px] text-orange-600 dark:text-orange-400 hover:text-orange-700 font-bold underline flex items-center gap-1"
+                >
+                  <span>⚙️ Colocar / Cambiar mi Clave Secreta</span>
+                </button>
+
+                <span className="text-[10px] text-slate-400 dark:text-emerald-400 font-mono">
+                  Inicial: Sena*2026
+                </span>
               </div>
             </div>
           )}
@@ -254,9 +347,9 @@ export default function Login() {
           {/* Primary Submit Button */}
           <button
             type="submit"
-            className="w-full py-3 bg-gradient-to-r from-emerald-700 to-emerald-800 hover:from-emerald-800 hover:to-emerald-900 text-white rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2"
+            className="w-full py-3 bg-gradient-to-r from-emerald-700 to-emerald-800 hover:from-emerald-800 hover:to-emerald-900 text-white rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
-            <span>Ingresar a la Plataforma</span>
+            <span>{role === 'instructor' ? 'Validar Clave e Ingresar' : 'Ingresar a la Plataforma'}</span>
             <span>➔</span>
           </button>
         </form>
@@ -298,6 +391,16 @@ export default function Login() {
           <span>{loading ? 'Conectando con Google...' : 'Continuar con Google Drive & Sheets'}</span>
         </button>
       </div>
+
+      {/* Modal to configure / place custom 9-character secret key */}
+      <SecurityKeyModal
+        isOpen={isConfigKeyModalOpen}
+        onClose={() => setIsConfigKeyModalOpen(false)}
+        onKeyUpdated={(newKey) => {
+          setPassword(newKey);
+          setLoginError(null);
+        }}
+      />
     </div>
   );
 }

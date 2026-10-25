@@ -2,20 +2,35 @@ import { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import DriveSyncManager from './DriveSyncManager';
+import ManualView from './ManualView';
 import { generateAlertMessageWithGemini } from '../services/geminiService';
 import GeminiAdvisorModal from './GeminiAdvisorModal';
+import SecurityKeyModal from './SecurityKeyModal';
 
 export default function InstructorView() {
-  const { learners, updateLearnerModule } = useData();
-  const [activeTab, setActiveTab] = useState<'supervision' | 'drive' | 'evaluador'>('supervision');
+  const { learners, updateLearnerModule, addLearner } = useData();
+  const [activeTab, setActiveTab] = useState<'supervision' | 'drive' | 'manual'>('supervision');
   const [filterFicha, setFilterFicha] = useState<string>('all');
   const [reviewingLearner, setReviewingLearner] = useState<any | null>(null);
   const [selectedModuleNum, setSelectedModuleNum] = useState<number>(1);
   const [advisorRubricScore, setAdvisorRubricScore] = useState<number>(4.2);
   const [advisorNotes, setAdvisorNotes] = useState<string>('');
   const [isAdvisorModalOpen, setIsAdvisorModalOpen] = useState(false);
+  const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
   const [quickMsgLearner, setQuickMsgLearner] = useState<{ learner: any; message: string } | null>(null);
   const [isGeneratingMsg, setIsGeneratingMsg] = useState(false);
+
+  // Modal para agregar aprendiz
+  const [isAddLearnerOpen, setIsAddLearnerOpen] = useState(false);
+  const [newLearnerData, setNewLearnerData] = useState({
+    name: '',
+    ficha: '',
+    program: 'Tecnología en Análisis y Desarrollo de Software (ADSO)',
+    center: 'Centro de Servicios y Gestión Empresarial',
+    whatsapp: '573147873570',
+    email: '',
+  });
+  const [learnerAddedSuccess, setLearnerAddedSuccess] = useState<string | null>(null);
 
   // Available unique fichas
   const uniqueFichas = Array.from(new Set(learners.map(l => l.ficha).filter(Boolean)));
@@ -82,6 +97,40 @@ export default function InstructorView() {
     }
   };
 
+  const handleAddLearnerSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newLearnerData.name.trim() || !newLearnerData.ficha.trim() || !newLearnerData.email.trim()) {
+      alert('Por favor completa los campos obligatorios: Nombre, Ficha y Correo de Gmail.');
+      return;
+    }
+
+    const newId = `learner-${Date.now()}`;
+    addLearner({
+      id: newId,
+      name: newLearnerData.name.trim(),
+      ficha: newLearnerData.ficha.trim(),
+      program: newLearnerData.program.trim() || 'Emprendimiento y Negocios Digitales',
+      center: newLearnerData.center.trim() || 'Centro de Formación SENA',
+      whatsapp: newLearnerData.whatsapp.trim() || '573147873570',
+      email: newLearnerData.email.trim(),
+    });
+
+    setLearnerAddedSuccess(
+      `¡Aprendiz "${newLearnerData.name.trim()}" agregado exitosamente a la Ficha ${newLearnerData.ficha.trim()}!`
+    );
+    setTimeout(() => setLearnerAddedSuccess(null), 5000);
+
+    setNewLearnerData({
+      name: '',
+      ficha: newLearnerData.ficha.trim(), // keep ficha for convenience when adding multiple
+      program: 'Tecnología en Análisis y Desarrollo de Software (ADSO)',
+      center: 'Centro de Servicios y Gestión Empresarial',
+      whatsapp: '573147873570',
+      email: '',
+    });
+    setIsAddLearnerOpen(false);
+  };
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Top Banner */}
@@ -101,7 +150,22 @@ export default function InstructorView() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={() => setIsSecurityModalOpen(true)}
+            className="px-3.5 py-2.5 rounded-xl bg-emerald-700/80 hover:bg-emerald-700 text-white text-xs font-bold shadow flex items-center gap-1.5 transition-all border border-emerald-600"
+            title="Configurar clave secreta de 9 caracteres y candado de privacidad"
+          >
+            <span>🔐 Clave Secreta (9 car.)</span>
+          </button>
+
+          <button
+            onClick={() => setIsAddLearnerOpen(true)}
+            className="px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow flex items-center gap-1.5 transition-all"
+          >
+            <span>➕ Agregar Aprendiz</span>
+          </button>
+
           <button
             onClick={() => setIsAdvisorModalOpen(true)}
             className="px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold shadow flex items-center gap-2 transition-all"
@@ -132,6 +196,16 @@ export default function InstructorView() {
           }`}
         >
           📁 Carpetas Drive & Google Sheets
+        </button>
+        <button
+          onClick={() => setActiveTab('manual')}
+          className={`py-3 px-6 border-b-2 transition-colors ${
+            activeTab === 'manual'
+              ? 'border-orange-500 text-orange-600 dark:text-orange-400'
+              : 'border-transparent text-emerald-900 dark:text-emerald-300 hover:text-emerald-700'
+          }`}
+        >
+          📖 Manual & Socialización a Aprendices
         </button>
       </div>
 
@@ -374,6 +448,9 @@ export default function InstructorView() {
       {/* Tab: Google Drive & Google Sheets Manager */}
       {activeTab === 'drive' && <DriveSyncManager learners={learners} />}
 
+      {/* Tab: Manual & Socialización a Aprendices */}
+      {activeTab === 'manual' && <ManualView initialTab="presentacion" />}
+
       {/* Evaluation & Review Modal */}
       {reviewingLearner && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -528,6 +605,180 @@ export default function InstructorView() {
         moduleName="Orientación al Asesor"
         currentPlan={learners}
         learnerName="Asesor SENA UED"
+      />
+
+      {/* Success Banner when learner is added */}
+      {learnerAddedSuccess && (
+        <div className="fixed bottom-6 right-6 z-50 p-4 rounded-2xl bg-emerald-700 text-white shadow-2xl border border-emerald-500 flex items-center gap-3 animate-fade-in text-xs font-semibold">
+          <span className="text-xl">✅</span>
+          <span>{learnerAddedSuccess}</span>
+          <button
+            onClick={() => setLearnerAddedSuccess(null)}
+            className="ml-2 text-emerald-200 hover:text-white"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Modal: Agregar Aprendiz a Ficha */}
+      {isAddLearnerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-emerald-950 p-6 sm:p-7 rounded-3xl max-w-lg w-full border-2 border-emerald-300 dark:border-emerald-700 shadow-2xl space-y-5 my-8">
+            <div className="flex items-center justify-between border-b border-emerald-100 dark:border-emerald-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-700 text-white flex items-center justify-center text-lg shadow-sm">
+                  ➕
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm sm:text-base text-emerald-950 dark:text-emerald-100">
+                    Agregar Nuevo Aprendiz
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-emerald-400">
+                    Registro directo en la base de datos de la UED y sincronización de Ficha
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsAddLearnerOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-emerald-900 text-slate-500 dark:text-emerald-300 hover:bg-slate-200 flex items-center justify-center text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleAddLearnerSubmit} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-bold text-slate-800 dark:text-emerald-200 mb-1">
+                  Nombre Completo del Aprendiz *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej: Juan Camilo Pérez Restrepo"
+                  value={newLearnerData.name}
+                  onChange={e => setNewLearnerData({ ...newLearnerData, name: e.target.value })}
+                  className="w-full p-2.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-emerald-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-800 dark:text-emerald-200 mb-1">
+                    Número de Ficha SENA *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    list="fichas-list"
+                    placeholder="Ej: 2845612"
+                    value={newLearnerData.ficha}
+                    onChange={e => setNewLearnerData({ ...newLearnerData, ficha: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-emerald-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none font-mono"
+                  />
+                  <datalist id="fichas-list">
+                    {uniqueFichas.map(f => (
+                      <option key={f} value={f} />
+                    ))}
+                  </datalist>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-800 dark:text-emerald-200 mb-1">
+                    WhatsApp (con indicativo) *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ej: 573147873570"
+                    value={newLearnerData.whatsapp}
+                    onChange={e => setNewLearnerData({ ...newLearnerData, whatsapp: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-emerald-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-800 dark:text-emerald-200 mb-1">
+                  Correo de Gmail del Aprendiz *
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="aprendiz.sena@gmail.com"
+                  value={newLearnerData.email}
+                  onChange={e => setNewLearnerData({ ...newLearnerData, email: e.target.value })}
+                  className="w-full p-2.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-emerald-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                />
+                <span className="text-[10px] text-slate-500 dark:text-emerald-400 mt-1 block">
+                  Indispensable: aquí se remitirá la copia (CC) automática de los comprobantes de culminación de módulo.
+                </span>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-800 dark:text-emerald-200 mb-1">
+                  Programa de Formación
+                </label>
+                <select
+                  value={newLearnerData.program}
+                  onChange={e => setNewLearnerData({ ...newLearnerData, program: e.target.value })}
+                  className="w-full p-2.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-emerald-900 text-slate-900 dark:text-white text-xs"
+                >
+                  <option value="Tecnología en Análisis y Desarrollo de Software (ADSO)">
+                    Tecnología en Análisis y Desarrollo de Software (ADSO)
+                  </option>
+                  <option value="Tecnología en Gestión Empresarial y Finanzas">
+                    Tecnología en Gestión Empresarial y Finanzas
+                  </option>
+                  <option value="Tecnología en Producción Multimedia">
+                    Tecnología en Producción Multimedia
+                  </option>
+                  <option value="Técnico en Mercadeo y Negocios Digitales">
+                    Técnico en Mercadeo y Negocios Digitales
+                  </option>
+                  <option value="Emprendimiento e Innovación Digital">
+                    Emprendimiento e Innovación Digital
+                  </option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-800 dark:text-emerald-200 mb-1">
+                  Centro de Formación SENA
+                </label>
+                <input
+                  type="text"
+                  placeholder="Centro de Servicios y Gestión Empresarial"
+                  value={newLearnerData.center}
+                  onChange={e => setNewLearnerData({ ...newLearnerData, center: e.target.value })}
+                  className="w-full p-2.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-emerald-900 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsAddLearnerOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-emerald-900 text-slate-700 dark:text-emerald-200 font-semibold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-bold shadow-md flex items-center gap-1.5 transition-all"
+                >
+                  <span>💾 Registrar Aprendiz</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Security Key Configuration Modal */}
+      <SecurityKeyModal
+        isOpen={isSecurityModalOpen}
+        onClose={() => setIsSecurityModalOpen(false)}
       />
     </div>
   );

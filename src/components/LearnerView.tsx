@@ -118,7 +118,7 @@ export default function LearnerView() {
               : 'border-transparent text-emerald-900 dark:text-emerald-300 hover:text-emerald-700'
           }`}
         >
-          <span>📖</span> Manual de Formulación UED
+          <span>📖</span> Manual & Presentación UED
         </button>
         <button
           onClick={() => setActiveTab('Perfil')}
@@ -228,7 +228,7 @@ export default function LearnerView() {
       )}
 
       {/* TAB 2: MANUAL */}
-      {activeTab === 'Manual' && <ManualView />}
+      {activeTab === 'Manual' && <ManualView initialTab="presentacion" />}
 
       {/* TAB 3: PERFIL */}
       {activeTab === 'Perfil' && (

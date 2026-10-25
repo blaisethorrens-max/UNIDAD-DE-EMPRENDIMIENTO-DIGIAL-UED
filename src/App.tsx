@@ -3,6 +3,9 @@ import { useAuth } from './context/AuthContext';
 import Login from './components/Login';
 import LearnerView from './components/LearnerView';
 import InstructorView from './components/InstructorView';
+import GlobalPrivacyShield from './components/GlobalPrivacyShield';
+import SecurityKeyModal from './components/SecurityKeyModal';
+import { isGlobalPrivacyLocked, isSessionUnlocked } from './services/securityService';
 
 export default function App() {
   const { user, logout } = useAuth();
@@ -10,10 +13,22 @@ export default function App() {
     return (localStorage.getItem('theme') as 'light' | 'dark') || 'light';
   });
 
+  const [isPrivacyUnlocked, setIsPrivacyUnlocked] = useState<boolean>(() => {
+    // Si no está bloqueado globalmente, o ya se desbloqueó en esta sesión:
+    return !isGlobalPrivacyLocked() || isSessionUnlocked();
+  });
+
+  const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
+
   useEffect(() => {
     localStorage.setItem('theme', theme);
     document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
+
+  // Si el candado de privacidad global está activo y la sesión no se ha desbloqueado
+  if (!isPrivacyUnlocked) {
+    return <GlobalPrivacyShield onUnlock={() => setIsPrivacyUnlocked(true)} />;
+  }
 
   if (!user) return <Login />;
 
@@ -51,6 +66,18 @@ export default function App() {
             </span>
           </div>
 
+          {/* Quick Security Access for Instructor */}
+          {user.role === 'instructor' && (
+            <button
+              onClick={() => setIsSecurityModalOpen(true)}
+              className="px-2.5 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-emerald-100 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors border border-emerald-600"
+              title="Configurar clave secreta de 9 caracteres y privacidad del prototipo"
+            >
+              <span>🔐</span>
+              <span className="hidden md:inline">Clave Secreta</span>
+            </button>
+          )}
+
           {/* Theme Switcher */}
           <button
             onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
@@ -74,6 +101,12 @@ export default function App() {
       <main className="p-4 sm:p-6">
         {user.role === 'learner' ? <LearnerView /> : <InstructorView />}
       </main>
+
+      {/* Security Modal for Advisor */}
+      <SecurityKeyModal
+        isOpen={isSecurityModalOpen}
+        onClose={() => setIsSecurityModalOpen(false)}
+      />
     </div>
   );
 }
