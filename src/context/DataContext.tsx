@@ -3,18 +3,19 @@ import { createContext, useContext, useState, useEffect } from 'react';
 export type LearnerData = {
   id: string;
   name: string;
-  documento: string; // Documento de Identidad (Cédula o T.I.)
+  documento?: string; // Documento de Identidad (Cédula o T.I.)
   ficha: string;
   program: string;
   center: string;
   whatsapp: string;
   email: string; // Correo de Gmail del aprendiz
-  accessPin: string; // Clave personal o PIN asignado por el asesor
+  accessPin?: string; // Clave personal o PIN asignado por el asesor
   registeredAt?: string; // Fecha de registro por el asesor
   progress: number; // 0-100
   moduleAnswers: Record<number, Record<string, string>>;
   moduleStatus: Record<number, 'pending' | 'in-review' | 'approved'>;
   score: number;
+  businessPlan?: Record<string, Record<string, any>>; // Datos de los 10 libros del Plan de Negocios
 };
 
 type DataContextType = {
@@ -22,6 +23,7 @@ type DataContextType = {
   addLearner: (learner: Omit<LearnerData, 'progress' | 'moduleAnswers' | 'moduleStatus' | 'score'>) => void;
   updateLearnerModule: (id: string, moduleId: number, status: 'pending' | 'in-review' | 'approved', answers?: Record<string, string>) => void;
   updateLearnerProfile: (id: string, updates: Partial<LearnerData>) => void;
+  updateBusinessPlan: (id: string, bookKey: string, bookData: Record<string, any>) => void;
 };
 
 const INITIAL_SEED_LEARNERS: LearnerData[] = [
@@ -209,8 +211,28 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
+  const updateBusinessPlan = (id: string, bookKey: string, bookData: Record<string, any>) => {
+    setLearners((prev) =>
+      prev.map((learner) => {
+        if (learner.id === id) {
+          const currentPlan = learner.businessPlan || {};
+          const currentBook = currentPlan[bookKey] || {};
+          const updatedPlan = {
+            ...currentPlan,
+            [bookKey]: { ...currentBook, ...bookData },
+          };
+          return {
+            ...learner,
+            businessPlan: updatedPlan,
+          };
+        }
+        return learner;
+      })
+    );
+  };
+
   return (
-    <DataContext.Provider value={{ learners, addLearner, updateLearnerModule, updateLearnerProfile }}>
+    <DataContext.Provider value={{ learners, addLearner, updateLearnerModule, updateLearnerProfile, updateBusinessPlan }}>
       {children}
     </DataContext.Provider>
   );

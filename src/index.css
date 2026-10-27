@@ -1,1 +1,48 @@
 @import "tailwindcss";
+
+@layer utilities {
+  @media print {
+    body {
+      background: white !important;
+      color: black !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    header,
+    nav,
+    .print\:hidden {
+      display: none !important;
+    }
+
+    #diploma-print-area {
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      min-height: 100vh !important;
+      margin: 0 !important;
+      padding: 1.5cm !important;
+      box-shadow: none !important;
+      border-width: 6px !important;
+      page-break-inside: avoid !important;
+      background: #FAFAF9 !important;
+    }
+
+    #business-plan-print-area {
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      margin: 0 !important;
+      padding: 1cm !important;
+      box-shadow: none !important;
+      border: none !important;
+      background: white !important;
+    }
+
+    @page {
+      margin: 1cm;
+    }
+  }
+}

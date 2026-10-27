@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { useLanguage } from '../context/LanguageContext';
 import { googleSignIn } from '../auth';
 import {
   verifyAdvisorKey,
@@ -8,10 +9,13 @@ import {
   getAdvisorSecretKey,
 } from '../services/securityService';
 import SecurityKeyModal from './SecurityKeyModal';
+import LanguageSwitcher from './LanguageSwitcher';
+import UEDLogo from './UEDLogo';
 
 export default function Login() {
   const { login } = useAuth();
   const { addLearner } = useData();
+  const { t } = useLanguage();
   const [role, setRole] = useState<'learner' | 'instructor'>('learner');
   const [formData, setFormData] = useState({
     name: '',
@@ -116,16 +120,19 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-emerald-100 to-orange-50 p-4">
       <div className="bg-white dark:bg-emerald-950 p-8 rounded-3xl shadow-xl border border-emerald-200 dark:border-emerald-800 w-full max-w-md space-y-6">
-        {/* Brand Lockup */}
-        <div className="text-center space-y-1">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-700 to-emerald-600 text-white text-2xl shadow-md mb-2">
-            🚀
-          </div>
-          <h1 className="text-xl font-extrabold text-emerald-950 dark:text-emerald-100">
-            Unidad de Emprendimiento Digital
-          </h1>
+        {/* Top bar with Language Switcher */}
+        <div className="flex items-center justify-between border-b border-emerald-100 dark:border-emerald-800/60 pb-3">
+          <span className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-300">
+            {t('common.language', 'Idioma')} / {t('common.english', 'English')}
+          </span>
+          <LanguageSwitcher variant="pill" showLabels={true} />
+        </div>
+
+        {/* Brand Lockup with Official UED Logo */}
+        <div className="flex flex-col items-center text-center space-y-2">
+          <UEDLogo size="lg" />
           <p className="text-xs text-slate-500 dark:text-emerald-300">
-            Plataforma con IA Gemini 3.8 Flash y Google Workspace
+            {t('login.title', 'Plataforma con IA Gemini 3.8 Flash y Google Workspace')}
           </p>
         </div>
 
@@ -137,13 +144,13 @@ export default function Login() {
               setRole('learner');
               setLoginError(null);
             }}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
               role === 'learner'
                 ? 'bg-emerald-700 text-white shadow-sm'
                 : 'text-emerald-900 dark:text-emerald-300 hover:text-emerald-950'
             }`}
           >
-            👨‍🎓 Aprendiz
+            {t('login.roleLearner', '👨‍🎓 Aprendiz')}
           </button>
           <button
             type="button"
@@ -151,13 +158,13 @@ export default function Login() {
               setRole('instructor');
               setLoginError(null);
             }}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
               role === 'instructor'
                 ? 'bg-orange-500 text-white shadow-sm'
                 : 'text-emerald-900 dark:text-emerald-300 hover:text-emerald-950'
             }`}
           >
-            🧑‍🏫 Asesor / Instructor 🔐
+            {t('login.roleAdvisor', '🧑‍🏫 Asesor / Instructor 🔐')}
           </button>
         </div>
 
@@ -349,7 +356,11 @@ export default function Login() {
             type="submit"
             className="w-full py-3 bg-gradient-to-r from-emerald-700 to-emerald-800 hover:from-emerald-800 hover:to-emerald-900 text-white rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
-            <span>{role === 'instructor' ? 'Validar Clave e Ingresar' : 'Ingresar a la Plataforma'}</span>
+            <span>
+              {role === 'instructor'
+                ? t('login.btnEnterAdvisor', '🔓 Desbloquear e Ingresar como Asesor')
+                : t('login.btnEnterLearner', '🚀 Ingresar como Aprendiz')}
+            </span>
             <span>➔</span>
           </button>
         </form>
@@ -358,7 +369,7 @@ export default function Login() {
         <div className="relative flex py-1 items-center">
           <div className="flex-grow border-t border-emerald-200 dark:border-emerald-800" />
           <span className="flex-shrink mx-3 text-[11px] text-slate-400 dark:text-emerald-400 uppercase tracking-wider font-semibold">
-            O conecta con Workspace
+            {t('login.googleSignIn', 'Continuar con Google Workspace')}
           </span>
           <div className="flex-grow border-t border-emerald-200 dark:border-emerald-800" />
         </div>
@@ -368,7 +379,7 @@ export default function Login() {
           type="button"
           onClick={handleGoogleSignIn}
           disabled={loading}
-          className="w-full py-2.5 px-4 bg-white dark:bg-emerald-900 border border-slate-300 dark:border-emerald-700 hover:bg-slate-50 dark:hover:bg-emerald-800/60 rounded-xl text-xs font-semibold text-slate-700 dark:text-emerald-100 shadow-xs flex items-center justify-center gap-3 transition-all"
+          className="w-full py-2.5 px-4 bg-white dark:bg-emerald-900 border border-slate-300 dark:border-emerald-700 hover:bg-slate-50 dark:hover:bg-emerald-800/60 rounded-xl text-xs font-semibold text-slate-700 dark:text-emerald-100 shadow-xs flex items-center justify-center gap-3 transition-all cursor-pointer"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24">
             <path
@@ -388,7 +399,7 @@ export default function Login() {
               d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
             />
           </svg>
-          <span>{loading ? 'Conectando con Google...' : 'Continuar con Google Drive & Sheets'}</span>
+          <span>{loading ? t('common.loading', 'Conectando con Google...') : t('login.googleSignInHint', 'Acceso seguro con Google Drive y Google Sheets')}</span>
         </button>
       </div>
 

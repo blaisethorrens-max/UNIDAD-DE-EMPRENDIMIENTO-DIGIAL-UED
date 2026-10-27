@@ -149,6 +149,24 @@ export default function DriveSyncManager({ learners }: DriveSyncManagerProps) {
         </div>
       )}
 
+      {/* Retention Policy Highlight Banner */}
+      <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-emerald-500/10 border border-orange-500/30 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2.5">
+          <span className="text-xl">⚡</span>
+          <div>
+            <strong className="text-slate-900 dark:text-emerald-100 block">
+              Google Apps Script: Ciclos de Custodia y Borrado Permanente Activos
+            </strong>
+            <span className="text-slate-600 dark:text-emerald-300">
+              Certificados (40h) y Planes de Negocio: <strong>30 días de vigencia en Drive</strong>. Repositorio consolidado de participantes: <strong>1 año en Google Sheets</strong>.
+            </span>
+          </div>
+        </div>
+        <div className="text-[11px] font-mono px-3 py-1 bg-orange-500/20 text-orange-700 dark:text-orange-300 rounded-lg border border-orange-500/30 font-semibold">
+          Trigger Diario: 02:00 AM (Code.gs)
+        </div>
+      </div>
+
       {/* Form: Add New Ficha Folder */}
       <form
         onSubmit={handleCreateFolder}

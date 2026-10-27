@@ -1,15 +1,20 @@
 import { useState } from 'react';
 import { useData } from '../context/DataContext';
+import { useLanguage } from '../context/LanguageContext';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import DriveSyncManager from './DriveSyncManager';
+import DriveRetentionManager from './DriveRetentionManager';
 import ManualView from './ManualView';
 import { generateAlertMessageWithGemini } from '../services/geminiService';
 import GeminiAdvisorModal from './GeminiAdvisorModal';
 import SecurityKeyModal from './SecurityKeyModal';
+import DiplomaModal from './DiplomaModal';
+import BusinessPlanDocumentModal from './BusinessPlanDocumentModal';
 
 export default function InstructorView() {
   const { learners, updateLearnerModule, addLearner } = useData();
-  const [activeTab, setActiveTab] = useState<'supervision' | 'drive' | 'manual'>('supervision');
+  const { t } = useLanguage();
+  const [activeTab, setActiveTab] = useState<'supervision' | 'drive' | 'retention' | 'manual'>('supervision');
   const [filterFicha, setFilterFicha] = useState<string>('all');
   const [reviewingLearner, setReviewingLearner] = useState<any | null>(null);
   const [selectedModuleNum, setSelectedModuleNum] = useState<number>(1);
@@ -17,6 +22,8 @@ export default function InstructorView() {
   const [advisorNotes, setAdvisorNotes] = useState<string>('');
   const [isAdvisorModalOpen, setIsAdvisorModalOpen] = useState(false);
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
+  const [selectedDiplomaLearner, setSelectedDiplomaLearner] = useState<any | null>(null);
+  const [selectedPlanLearner, setSelectedPlanLearner] = useState<any | null>(null);
   const [quickMsgLearner, setQuickMsgLearner] = useState<{ learner: any; message: string } | null>(null);
   const [isGeneratingMsg, setIsGeneratingMsg] = useState(false);
 
@@ -138,39 +145,39 @@ export default function InstructorView() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-mono uppercase bg-orange-500 px-2 py-0.5 rounded font-bold">
-              Panel Asesor / Instructor
+              {t('instructor.bannerTag', 'Panel Asesor / Instructor')}
             </span>
             <span className="text-xs bg-emerald-700/80 px-2 py-0.5 rounded text-emerald-200">
-              Unidad de Emprendimiento Digital
+              {t('instructor.institutionTag', 'Unidad de Emprendimiento Digital')}
             </span>
           </div>
-          <h2 className="text-2xl font-bold">Supervisión, Alertas y Sincronización</h2>
+          <h2 className="text-2xl font-bold">{t('instructor.bannerTitle', 'Supervisión, Alertas y Sincronización')}</h2>
           <p className="text-xs text-emerald-100 mt-1">
-            Gestión integral de aprendices por Ficha, control de entregables en Google Drive/Sheets y asistencia con Gemini 3.8 Flash
+            {t('instructor.bannerSubtitle', 'Gestión integral de aprendices por Ficha, control de entregables en Google Drive/Sheets y asistencia con Gemini 3.8 Flash')}
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
           <button
             onClick={() => setIsSecurityModalOpen(true)}
-            className="px-3.5 py-2.5 rounded-xl bg-emerald-700/80 hover:bg-emerald-700 text-white text-xs font-bold shadow flex items-center gap-1.5 transition-all border border-emerald-600"
-            title="Configurar clave secreta de 9 caracteres y candado de privacidad"
+            className="px-3.5 py-2.5 rounded-xl bg-emerald-700/80 hover:bg-emerald-700 text-white text-xs font-bold shadow flex items-center gap-1.5 transition-all border border-emerald-600 cursor-pointer"
+            title={t('nav.secretKeyTitle', 'Configurar clave secreta de 9 caracteres y candado de privacidad')}
           >
-            <span>🔐 Clave Secreta (9 car.)</span>
+            <span>{t('instructor.btnSecretKey', '🔐 Clave Secreta (9 car.)')}</span>
           </button>
 
           <button
             onClick={() => setIsAddLearnerOpen(true)}
-            className="px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow flex items-center gap-1.5 transition-all"
+            className="px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow flex items-center gap-1.5 transition-all cursor-pointer"
           >
-            <span>➕ Agregar Aprendiz</span>
+            <span>{t('instructor.btnAddLearner', '➕ Agregar Aprendiz')}</span>
           </button>
 
           <button
             onClick={() => setIsAdvisorModalOpen(true)}
-            className="px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold shadow flex items-center gap-2 transition-all"
+            className="px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold shadow flex items-center gap-2 transition-all cursor-pointer"
           >
-            <span>✨ Asistente IA Gemini 3.8 Flash</span>
+            <span>{t('instructor.btnAiAdvisor', '✨ Asistente IA Gemini 3.8 Flash')}</span>
           </button>
         </div>
       </div>
@@ -185,7 +192,7 @@ export default function InstructorView() {
               : 'border-transparent text-emerald-900 dark:text-emerald-300 hover:text-emerald-700'
           }`}
         >
-          📋 Dashboard de Supervisión ({learners.length} Aprendices)
+          {t('instructor.tabSupervision', { count: learners.length })}
         </button>
         <button
           onClick={() => setActiveTab('drive')}
@@ -195,7 +202,17 @@ export default function InstructorView() {
               : 'border-transparent text-emerald-900 dark:text-emerald-300 hover:text-emerald-700'
           }`}
         >
-          📁 Carpetas Drive & Google Sheets
+          {t('instructor.tabDrive', '📁 Carpetas Drive & Google Sheets')}
+        </button>
+        <button
+          onClick={() => setActiveTab('retention')}
+          className={`py-3 px-6 border-b-2 transition-colors flex items-center gap-1.5 ${
+            activeTab === 'retention'
+              ? 'border-orange-500 text-orange-600 dark:text-orange-400 font-bold'
+              : 'border-transparent text-emerald-900 dark:text-emerald-300 hover:text-emerald-700'
+          }`}
+        >
+          <span>{t('instructor.tabRetention', '⚡ Apps Script & Ciclos Drive (30d / 1 año)')}</span>
         </button>
         <button
           onClick={() => setActiveTab('manual')}
@@ -205,7 +222,7 @@ export default function InstructorView() {
               : 'border-transparent text-emerald-900 dark:text-emerald-300 hover:text-emerald-700'
           }`}
         >
-          📖 Manual & Socialización a Aprendices
+          {t('instructor.tabManual', '📖 Manual & Socialización a Aprendices')}
         </button>
       </div>
 
@@ -425,6 +442,24 @@ export default function InstructorView() {
                                 <span>✨ IA</span>
                               </button>
 
+                              {/* Diploma 40h Print Button */}
+                              <button
+                                onClick={() => setSelectedDiplomaLearner(learner)}
+                                className="px-2.5 py-1 rounded bg-[#FB923C]/20 hover:bg-[#FB923C]/30 text-[#EA580C] dark:text-[#FB923C] font-bold border border-[#FB923C]/40 flex items-center gap-1 transition-all"
+                                title="Ver e imprimir Diploma de 40 Horas"
+                              >
+                                <span>📜 Diploma</span>
+                              </button>
+
+                              {/* Business Plan Print Button */}
+                              <button
+                                onClick={() => setSelectedPlanLearner(learner)}
+                                className="px-2.5 py-1 rounded bg-[#39FF14]/20 hover:bg-[#39FF14]/30 text-[#365314] dark:text-[#39FF14] font-bold border border-[#39FF14]/40 flex items-center gap-1 transition-all"
+                                title="Ver e imprimir Plan de Negocios"
+                              >
+                                <span>📑 Plan</span>
+                              </button>
+
                               {/* Review deliverable */}
                               <button
                                 onClick={() => handleOpenReview(learner, 1)}
@@ -447,6 +482,9 @@ export default function InstructorView() {
 
       {/* Tab: Google Drive & Google Sheets Manager */}
       {activeTab === 'drive' && <DriveSyncManager learners={learners} />}
+
+      {/* Tab: Google Apps Script & Ciclos de Retención Drive (30d / 1 año) */}
+      {activeTab === 'retention' && <DriveRetentionManager learners={learners} />}
 
       {/* Tab: Manual & Socialización a Aprendices */}
       {activeTab === 'manual' && <ManualView initialTab="presentacion" />}
@@ -780,6 +818,24 @@ export default function InstructorView() {
         isOpen={isSecurityModalOpen}
         onClose={() => setIsSecurityModalOpen(false)}
       />
+
+      {/* Diploma Modal for selected learner */}
+      {selectedDiplomaLearner && (
+        <DiplomaModal
+          isOpen={!!selectedDiplomaLearner}
+          onClose={() => setSelectedDiplomaLearner(null)}
+          learner={selectedDiplomaLearner}
+        />
+      )}
+
+      {/* Business Plan Document Modal for selected learner */}
+      {selectedPlanLearner && (
+        <BusinessPlanDocumentModal
+          isOpen={!!selectedPlanLearner}
+          onClose={() => setSelectedPlanLearner(null)}
+          learner={selectedPlanLearner}
+        />
+      )}
     </div>
   );
 }
